@@ -1,0 +1,6 @@
+name,email,role,type,projects,notify
+Ravi,ravi@example.com,Project engineer,internal,PRJ-001,daily
+Anil,anil@example.com,Workshop lead,internal,PRJ-002;PRJ-003,daily
+Meera,meera@example.com,Accounts,internal,all,weekly
+Director Sample,director@example.com,Management,internal,all,weekly
+Client A Contact,clienta@example.com,Client representative,client,PRJ-001,milestone

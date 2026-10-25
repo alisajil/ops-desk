@@ -1,0 +1,14 @@
+project_id,kind,doc_no,date,due,party,category,amount_inr,paid_inr,status,zoho_id
+PRJ-001,invoice,INV-0001,2026-10-05,2026-11-04,Sample Client A,,1000000,1000000,paid,z1
+PRJ-001,invoice,INV-0002,2026-10-20,2026-10-25,Sample Client A,,800000,0,overdue,z2
+PRJ-001,bill,BILL-0101,2026-10-12,2026-11-11,Vendor X,materials,850000,0,open,z3
+PRJ-001,bill,BILL-0102,2026-10-15,2026-10-22,Vendor Y,materials,450000,450000,paid,z4
+PRJ-001,expense,EXP-0201,2026-10-16,,Staff,site travel,40000,40000,paid,z5
+PRJ-001,expense,EXP-0202,2026-10-18,,Staff,site food,25000,25000,paid,z6
+PRJ-001,expense,EXP-0203,2026-10-21,,Vendor Z,site consumables,55000,55000,paid,z7
+PRJ-001,po,PO-0301,2026-10-18,,Vendor P,pump set,500000,0,open,z8
+PRJ-001,invoice,INV-0099,2026-10-02,2026-11-01,Sample Client A,,999999,0,void,z13
+PRJ-002,invoice,INV-0003,2026-10-10,2026-11-09,Sample Client B,,550000,0,open,z9
+PRJ-002,bill,BILL-0103,2026-10-14,2026-11-13,Vendor Q,bought_out,420000,0,open,z10
+PRJ-002,bill,BILL-0104,2026-10-10,2026-11-09,Steel Co,materials,280000,280000,paid,z11
+PRJ-002,expense,EXP-0204,2026-10-20,,Staff,labour,40000,40000,paid,z12

@@ -1,0 +1,4 @@
+id,name,client,site,type,status,start,end,budget_inr,contract_value_inr,cash_head,owner
+PRJ-001,Warehouse sprinkler retrofit,Sample Client A,Site A,fire_fighting,active,2026-09-14,2026-11-30,2500000,3200000,Project Alpha,Ravi
+PRJ-002,Pump skid fabrication,Sample Client B,Workshop,fabrication,active,2026-10-01,2026-11-15,800000,1100000,Project Beta,Anil
+PRJ-003,Hydraulic cylinder repair batch,Sample Client C,Workshop,repair,planned,2026-11-02,2026-11-20,300000,420000,Project Gamma,Anil

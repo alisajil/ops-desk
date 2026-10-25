@@ -1,0 +1,9 @@
+{
+  "management_recipients": ["director@example.com"],
+  "cashflow_editors": ["director@example.com", "meera@example.com"],
+  "site_expense_categories": ["site travel", "site food", "site consumables", "site accommodation"],
+  "auto_send": [],
+  "currency": "INR",
+  "timezone": "Asia/Kolkata",
+  "work_week": "Mon-Sat"
+}

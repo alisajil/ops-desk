@@ -1,0 +1,4 @@
+id,project_id,raised,type,description,owner,status,due,days_delay,cost_impact_inr
+I001,PRJ-001,2026-10-14,delay,Authority comments on drawings pending,Ravi,open,2026-10-24,6,0
+I002,PRJ-002,2026-10-22,material,Motor delivery delayed by supplier,Anil,open,2026-10-30,4,25000
+I003,PRJ-001,2026-10-01,quality,Weld rework on header supports,Ravi,resolved,2026-10-08,0,15000

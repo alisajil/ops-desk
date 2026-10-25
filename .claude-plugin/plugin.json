@@ -1,0 +1,11 @@
+{
+  "name": "ops-desk",
+  "version": "0.2.0",
+  "description": "Operations, project P&L and cash assistant for small engineering companies: reads the ops@ mailbox, syncs Zoho Books by project code, tracks schedules, issues and the cash flow workbook, drafts weekly plans, reminders and management reports.",
+  "author": {
+    "name": "alisajil"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/alisajil/ops-desk",
+  "repository": "https://github.com/alisajil/ops-desk"
+}

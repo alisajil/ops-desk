@@ -1,0 +1,11 @@
+id,project_id,task,owner,start,due,status,depends_on,notes
+T001,PRJ-001,Site survey and measurements,Ravi,2026-09-14,2026-09-18,done,,
+T002,PRJ-001,Hydraulic calculation and drawings,Ravi,2026-09-19,2026-10-02,done,T001,
+T003,PRJ-001,Client and authority approval of drawings,Ravi,2026-10-03,2026-10-20,doing,T002,Waiting on authority comments
+T004,PRJ-001,Procure pipes and sprinkler heads,Anil,2026-10-10,2026-10-30,doing,T002,
+T005,PRJ-001,Install main header,Ravi,2026-11-02,2026-11-12,todo,T003;T004,
+T006,PRJ-001,Hydro test and commissioning,Ravi,2026-11-16,2026-11-24,todo,T005,
+T007,PRJ-002,Cut and weld skid frame,Anil,2026-10-12,2026-10-22,doing,,
+T008,PRJ-002,Mount pump and motor,Anil,2026-10-23,2026-10-28,blocked,T007,Motor delivery delayed
+T009,PRJ-002,Pressure test and paint,Anil,2026-10-29,2026-11-10,todo,T008,
+T010,PRJ-003,Receive cylinders and inspect,Anil,2026-11-02,2026-11-04,todo,,
