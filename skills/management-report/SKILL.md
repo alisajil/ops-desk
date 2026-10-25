@@ -18,6 +18,7 @@ Same as `ops-inbox`: data folder (`ops.py where` prints its path; `<data>` means
    - Project P&L (follow the `project-pnl` rules, including the note that early projects show a loss before billing): billed, received, overdue receivables, cost to date, committed, profit and margin per project, then totals.
    - Site expenses per project and by category, and any month-on-month jump.
    - Issues: overdue first, total delay days open, total cost impact, and any safety issue stated plainly.
+   - Early warnings (`early-warning`): every high item, and medium items open more than 7 days, each with a recommendation. Add the bids pipeline (`gem-bids`), documents expiring (`company-documents`) and client contact and complaints (`client-care`).
    - Lookahead: key tasks due in the next 14 days (`ops.py week --start <date>` twice).
    - Decisions needed: numbered, each with a recommended answer and the date it is needed by.
 3. For a monthly report, add: projects completed, projects started, total exposure against total approved, and the top three recurring causes of delay from `log.md`.

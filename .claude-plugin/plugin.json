@@ -1,7 +1,7 @@
 {
   "name": "ops-desk",
-  "version": "0.2.0",
-  "description": "Operations, project P&L and cash assistant for small engineering companies: reads the ops@ mailbox, syncs Zoho Books by project code, tracks schedules, issues and the cash flow workbook, drafts weekly plans, reminders and management reports.",
+  "version": "0.3.0",
+  "description": "Operations manager assistant for a small engineering and systems-integration company: huddles, team planning, project P&L, cash, client care, early warnings and GeM bid readiness.",
   "author": {
     "name": "alisajil"
   },

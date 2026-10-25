@@ -17,6 +17,7 @@ Same as `ops-inbox`: data folder (`ops.py where` prints its path; `<data>` means
    - Clashes from `week`, with a suggested fix.
    - Cash this week: payments and receipts due (date, item, amount), the balance after each day's items, the lowest balance in the next 30 days. If any month is in shortfall, say so in the headline.
    - Open issues per project, overdue ones first (from `ops.py issues`), with owner and what is needed.
+   - Early warnings from `ops.py risks` (high first), bids closing within 30 days (`ops.py bids`), documents expiring within 60 days (`ops.py documents`), and people on leave or overloaded (`ops.py workload`).
    - Money flags: projects with cost over 90 percent of budget, overdue client payments, overdue vendor bills that block work (from `ops.py pnl`; state the date of the last Zoho sync).
    - Decisions needed from management, each with a recommended answer.
 3. Save the plan to `<data>/reports/weekly-YYYY-MM-DD.md`.

@@ -1,0 +1,9 @@
+bid_id,doc_name,doc_id,status,owner,due,notes
+B001,Company registration certificate,D001,ready,Meera,2026-10-30,
+B001,Quality certificate,D003,ready,Meera,2026-10-30,
+B001,Bank solvency letter,D004,ready,Meera,2026-10-30,
+B001,Technical compliance sheet,,missing,Ravi,2026-10-30,
+B001,Price schedule,,needed,Ravi,2026-11-01,
+B002,Company registration certificate,D001,needed,Meera,2026-11-15,
+B002,OEM authorisation letter,D006,needed,Meera,2026-11-15,
+B003,Technical compliance sheet,,missing,Anil,2026-10-18,

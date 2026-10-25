@@ -1,13 +1,15 @@
 {
   "name": "ops-desk-tools",
-  "owner": { "name": "alisajil" },
+  "owner": {
+    "name": "alisajil"
+  },
   "description": "Claude plugins for small-company operations.",
   "plugins": [
     {
       "name": "ops-desk",
       "source": "./",
-      "description": "Operations, project P&L and cash assistant for small engineering companies: ops@ mailbox triage, Zoho Books sync, schedules, issues, cash flow, weekly plan, reminders, management report.",
-      "version": "0.2.0"
+      "description": "Operations manager assistant for a small engineering and systems-integration company: huddles, team planning, project P&L, cash, client care, early warnings and GeM bid readiness.",
+      "version": "0.3.0"
     }
   ]
 }

@@ -1,0 +1,5 @@
+id,portal,bid_no,title,buyer,closing,opening,value_inr,security_inr,status,owner,notes
+B001,GeM,SAMPLE/B/0000001,Supply and installation of a pump set,Sample Department 1,2026-11-02,2026-11-03,1500000,30000,preparing,Ravi,
+B002,GeM,SAMPLE/B/0000002,Annual maintenance of fire pumps,Sample Department 2,2026-11-20,2026-11-21,800000,0,identified,Ravi,
+B003,GeM,SAMPLE/B/0000003,Hydraulic cylinder repair,Sample Department 3,2026-10-20,2026-10-21,300000,0,preparing,Anil,
+B004,GeM,SAMPLE/B/0000004,Valve supply,Sample Department 4,2026-10-10,2026-10-11,400000,0,submitted,Ravi,

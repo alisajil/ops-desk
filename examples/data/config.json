@@ -5,5 +5,11 @@
   "auto_send": [],
   "currency": "INR",
   "timezone": "Asia/Kolkata",
-  "work_week": "Mon-Sat"
+  "work_week": "Mon-Sat",
+  "horizon_days": 30,
+  "document_warning_days": [60, 30, 7],
+  "bid_warning_days": [30, 14, 7],
+  "client_update_days": 7,
+  "max_concurrent_tasks": 4,
+  "progress_gap_pct": [15, 30]
 }

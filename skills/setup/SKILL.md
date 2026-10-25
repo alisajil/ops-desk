@@ -43,6 +43,9 @@ Only when Zoho tools exist.
 ## 7. Add the other projects
 List the remaining Zoho projects. Propose rows for `projects.csv`. Write them after the user confirms. Then run `zoho-sync` for all of them and `ops.py pnl`.
 
+## 7a. Team, documents and bids
+Ask for the team (name, role, skills, weekly hours) and write `team.csv`. Ask for the company documents the user can list now (name, category, expiry, where the file is kept) and write `documents.csv` after each date is confirmed. Ask whether the company bids on government portals such as GeM. If yes, explain that `gem-bids` tracks bids and checklists but never logs in or submits. Set `client_type` to `govt` for government clients in `projects.csv`.
+
 ## 8. Mailbox test
 If the mail connector exists: ask the user to send a short test mail to ops@, then run the `ops-inbox` skill. Check that it is classified, nothing is sent, and a draft appears.
 

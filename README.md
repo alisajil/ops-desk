@@ -1,14 +1,14 @@
 # ops-desk
 
-Operations, project money and cash assistant for a small engineering and installation company. People email `ops@your-company.com`. Claude reads the mail, keeps schedules, issues and the cash flow workbook up to date, pulls project actuals from Zoho Books, and drafts the weekly plan, reminders and management report.
+An operations manager assistant for a small engineering and systems-integration company. People email `ops@your-company.com`. Claude acts as the operations manager: it runs the daily and weekly huddles, keeps the team organised, tracks projects, money and cash, watches profit and client happiness, warns management early about problems that are coming, and keeps company documents and government bids (GeM) ready.
 
-Version 0.2.0. Three places hold data, each with one job:
+Version 0.3.0. Three places hold data, each with one job:
 
 | Where | Holds | Written by |
 |---|---|---|
 | Zoho Books | Actual invoices, bills, expenses, POs per project code | Your accountant. The plugin only reads it. |
 | Cash flow workbook (Excel on OneDrive) | Forward cash plan: what is paid and received when | `cashflow-update`, after your yes |
-| CSV files in the data folder | Projects, tasks, issues, stakeholders, a copy of Zoho lines | The plugin |
+| CSV files in the data folder | Projects, tasks, issues, team and leave, documents, bids, client log, a copy of Zoho lines | The plugin |
 
 The project code is the key everywhere: `projects.csv` `id` is the same code used in Zoho Books.
 
@@ -17,6 +17,13 @@ The project code is the key everywhere: `projects.csv` `id` is the same code use
 | Skill | Use it for |
 |---|---|
 | `setup` | First-time setup on a new computer, including the Zoho test. |
+| `ops-manager` | The role itself: rhythm, the six questions, escalation rules, what never to do. Start here. |
+| `huddle` | Daily and weekly huddle: agenda from live data, minutes, decisions, actions turned into tasks. |
+| `early-warning` | Scan for problems coming in the next weeks and warn management with a recommendation. |
+| `gem-bids` | Government tenders on GeM: go or no-go, checklist from the bid document, readiness, after the win. |
+| `company-documents` | Register of company documents with expiry warnings and document packs for bids. |
+| `team-planner` | Roles, skills, workload, leave, fair assignment of new work. |
+| `client-care` | Contact log, status updates, complaints, payment follow-ups, unhappy-client signals. |
 | `ops-inbox` | Turn new mail into task and issue updates. Draft entries for the accountant. Draft replies. |
 | `zoho-sync` | Copy per-project invoices, bills, expenses, POs from Zoho Books (read-only). |
 | `project-pnl` | Per-project P&L, cost against budget, overdue client payments and vendor bills, site expenses. |
@@ -28,8 +35,22 @@ The project code is the key everywhere: `projects.csv` `id` is the same code use
 | `management-report` | Friday or monthly status: cash first, P&L, RAG per project, decisions needed. |
 
 Two scripts do all date and money maths and validate the data, so Claude never calculates these itself:
-- `scripts/ops.py`: schedule, issues, P&L from the Zoho lines, reminders, RAG.
+- `scripts/ops.py`: schedule, issues, P&L from the Zoho lines, reminders, RAG, and the commands `risks`, `workload`, `documents`, `bids`, `huddle`.
+- `scripts/risk.py`: the early-warning rules, workload, document expiry, bid readiness and huddle data behind those commands.
 - `scripts/cashflow.py`: the Excel workbook. It inserts and removes rows the way Excel does (re-chains the balance formulas, shifts recurring links, summary ranges, highlights and print area), checks the result, backs up the old file, then replaces it. It refuses to write if the file is open in Excel.
+
+## How it runs the company
+
+| When | What happens |
+|---|---|
+| Every working day | Read `ops@`, scan for risks, send reminders, daily huddle (15 minutes) |
+| Monday | Sync Zoho, weekly plan, weekly huddle (45 minutes) |
+| Friday | Management report, a status update to every active client |
+| Monthly | Review documents, bids pipeline, team workload, project P&L |
+
+**What it warns about, ahead of time** (`ops.py risks`): schedule slips and blocked work, cost running ahead of progress, late client payments, clients with no contact or an unanswered complaint, documents about to expire, bids closing with missing documents, people overloaded or on leave when work is due, and cash going negative. Each warning has a severity, the number of days until it bites, and a recommendation. High items go to management the same day. Thresholds are in `config.json`.
+
+**Government work.** `gem-bids` tracks each bid, builds its checklist from the bid's own document, and checks every linked company document against the closing date. It never assumes a requirement, never logs in to the portal and never submits. A person submits.
 
 ## Install (each colleague)
 
@@ -111,7 +132,8 @@ Create scheduled tasks in Claude (Asia/Kolkata):
 
 | When | Prompt |
 |---|---|
-| Mon to Sat 08:30 | Run the ops-inbox skill, then the stakeholder-reminders skill. |
+| Mon to Sat 08:30 | Run the ops-inbox skill, then early-warning, then stakeholder-reminders. |
+| Mon to Sat 09:30 | Prepare the daily huddle agenda with the huddle skill. |
 | Monday 07:00 | Run the zoho-sync skill, then the weekly-plan skill. |
 | Friday 16:30 | Run the zoho-sync skill, then the management-report skill. |
 
@@ -134,6 +156,11 @@ Headers must not change. Dates `YYYY-MM-DD`. Money in rupees, digits only, exclu
 - `tasks.csv`, `stakeholders.csv`, `reminder_log.csv`.
 - `zoho_lines.csv`: written by `zoho-sync`. Statuses void, draft and cancelled are ignored in totals.
 - `issues.csv`: types delay, quality, safety, material, payment, client, other. Status open, in_progress, resolved.
+- `projects.csv` also has `client_type` (`govt` or `private`, blank means private).
+- `team.csv` (name, role, skills, weekly hours) and `leave.csv` (name, from, to, reason).
+- `documents.csv`: company documents with number, issue and expiry dates, file location and owner. Blank expiry means it does not expire.
+- `bids.csv` and `bid_documents.csv`: one row per bid, and its document checklist (`doc_id` links a line to `documents.csv`). Status identified, preparing, submitted, won, lost, no_bid.
+- `client_log.csv`: dated client contacts. Kinds update, meeting, complaint, praise, payment_followup.
 
 ## Assumptions to confirm
 
@@ -141,6 +168,8 @@ Headers must not change. Dates `YYYY-MM-DD`. Money in rupees, digits only, exclu
 - Cost percent of budget: amber at 90, red above 100. Project red at 3 or more overdue tasks or overdue issues (`AMBER_PCT`, `RED_OVERDUE` in `scripts/ops.py`).
 - Stage templates in `project-schedule` are starting points. Replace them with your real stages and typical durations. Approval requirements must be confirmed per project.
 - The Zoho tool names and field mapping were not tested against a live Zoho account (no connection yet). `zoho-sync` reads the connector's tool list instead of assuming names.
+- The early-warning rules are plain rules over the data, not forecasts. Progress is the share of tasks done. Change thresholds in `config.json`: `horizon_days`, `document_warning_days`, `bid_warning_days`, `client_update_days`, `max_concurrent_tasks`, `progress_gap_pct`.
+- GeM and tender requirements are not built in. Each bid document decides what is needed. Confirm with the portal's help pages when unsure.
 
 ## Develop
 

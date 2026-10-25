@@ -19,27 +19,40 @@ from datetime import date, timedelta
 from pathlib import Path
 
 SCHEMA = {
-    "projects": ["id", "name", "client", "site", "type", "status", "start", "end", "budget_inr", "contract_value_inr", "cash_head", "owner"],
+    "projects": ["id", "name", "client", "site", "type", "status", "start", "end", "budget_inr", "contract_value_inr", "cash_head", "owner", "client_type"],
     "tasks": ["id", "project_id", "task", "owner", "start", "due", "status", "depends_on", "notes"],
     "stakeholders": ["name", "email", "role", "type", "projects", "notify"],
     "zoho_lines": ["project_id", "kind", "doc_no", "date", "due", "party", "category", "amount_inr", "paid_inr", "status", "zoho_id"],
     "issues": ["id", "project_id", "raised", "type", "description", "owner", "status", "due", "days_delay", "cost_impact_inr"],
     "reminder_log": ["date", "owner", "task_id"],
+    "team": ["name", "role", "skills", "weekly_hours"],
+    "leave": ["name", "from", "to", "reason"],
+    "documents": ["id", "name", "category", "number", "issued", "expiry", "location", "owner"],
+    "bids": ["id", "portal", "bid_no", "title", "buyer", "closing", "opening", "value_inr", "security_inr", "status", "owner", "notes"],
+    "bid_documents": ["bid_id", "doc_name", "doc_id", "status", "owner", "due", "notes"],
+    "client_log": ["date", "project_id", "kind", "note"],
 }
-OPTIONAL = {"zoho_lines", "issues", "reminder_log"}  # a new install has none of these yet
+# a new install has none of these yet
+OPTIONAL = {"zoho_lines", "issues", "reminder_log", "team", "leave", "documents", "bids", "bid_documents", "client_log"}
 TASK_STATUS = {"todo", "doing", "blocked", "done"}
 PROJECT_STATUS = {"planned", "active", "on_hold", "done", "cancelled"}
 ISSUE_STATUS = {"open", "in_progress", "resolved"}
 ISSUE_TYPES = {"delay", "quality", "safety", "material", "payment", "client", "other"}
 ZOHO_KINDS = {"invoice", "bill", "expense", "po"}
+CLIENT_TYPES = {"private", "govt"}  # blank counts as private
+BID_STATUS = {"identified", "preparing", "submitted", "won", "lost", "no_bid"}
+BID_DOC_STATUS = {"needed", "ready", "missing", "na"}
+CLIENT_LOG_KINDS = {"update", "meeting", "complaint", "praise", "payment_followup"}
 IGNORED_STATUS = {"void", "draft", "cancelled"}  # Zoho documents that do not count
 DATE_FIELDS = {
     "projects": ["start", "end"], "tasks": ["start", "due"], "reminder_log": ["date"],
-    "zoho_lines": ["date", "due"], "issues": ["raised", "due"],
+    "zoho_lines": ["date", "due"], "issues": ["raised", "due"], "leave": ["from", "to"],
+    "documents": ["issued", "expiry"], "bids": ["closing", "opening"], "bid_documents": ["due"],
+    "client_log": ["date"],
 }
 NUM_FIELDS = {
     "projects": ["budget_inr", "contract_value_inr"], "zoho_lines": ["amount_inr", "paid_inr"],
-    "issues": ["days_delay", "cost_impact_inr"],
+    "issues": ["days_delay", "cost_impact_inr"], "team": ["weekly_hours"], "bids": ["value_inr", "security_inr"],
 }
 AMBER_PCT = 90  # ponytail: one global threshold, per-project column if needed
 RED_OVERDUE = 3  # overdue tasks or issues that turn a project red; days late that trigger escalation
@@ -155,6 +168,46 @@ def validate(data):
     for i, r in enumerate(data["reminder_log"], start=2):
         if r["task_id"] not in tids:
             errors.append(f"reminder_log.csv row {i}: unknown task_id '{r['task_id']}'")
+    return errors + validate_planning(data, pids)
+
+
+def validate_planning(data, pids):
+    """Checks for the team, document, bid and client files."""
+    errors = []
+    for i, r in enumerate(data["projects"], start=2):
+        if r["client_type"] and r["client_type"] not in CLIENT_TYPES:
+            errors.append(f"projects.csv row {i}: client_type '{r['client_type']}' not in {sorted(CLIENT_TYPES)} (or blank)")
+    names = {r["name"] for r in data["team"]}
+    for i, r in enumerate(data["leave"], start=2):
+        if r["name"] not in names:
+            errors.append(f"leave.csv row {i}: '{r['name']}' is not in team.csv")
+        if not r["from"] or not r["to"] or r["from"] > r["to"]:
+            errors.append(f"leave.csv row {i}: needs from and to dates, from not after to")
+    doc_ids = [r["id"] for r in data["documents"]]
+    for dup in sorted({x for x in doc_ids if doc_ids.count(x) > 1}):
+        errors.append(f"documents.csv: duplicate id {dup}")
+    bid_ids = [r["id"] for r in data["bids"]]
+    for dup in sorted({x for x in bid_ids if bid_ids.count(x) > 1}):
+        errors.append(f"bids.csv: duplicate id {dup}")
+    for i, r in enumerate(data["bids"], start=2):
+        if r["status"] not in BID_STATUS:
+            errors.append(f"bids.csv row {i}: status '{r['status']}' not in {sorted(BID_STATUS)}")
+        if not r["closing"]:
+            errors.append(f"bids.csv row {i}: closing date is required")
+    for i, r in enumerate(data["bid_documents"], start=2):
+        if r["bid_id"] not in bid_ids:
+            errors.append(f"bid_documents.csv row {i}: unknown bid_id '{r['bid_id']}'")
+        if r["status"] not in BID_DOC_STATUS:
+            errors.append(f"bid_documents.csv row {i}: status '{r['status']}' not in {sorted(BID_DOC_STATUS)}")
+        if r["doc_id"] and r["doc_id"] not in doc_ids:
+            errors.append(f"bid_documents.csv row {i}: doc_id '{r['doc_id']}' not in documents.csv")
+    for i, r in enumerate(data["client_log"], start=2):
+        if r["project_id"] not in pids:
+            errors.append(f"client_log.csv row {i}: unknown project code '{r['project_id']}'")
+        if r["kind"] not in CLIENT_LOG_KINDS:
+            errors.append(f"client_log.csv row {i}: kind '{r['kind']}' not in {sorted(CLIENT_LOG_KINDS)}")
+        if not r["date"]:
+            errors.append(f"client_log.csv row {i}: date is required")
     return errors
 
 
@@ -420,6 +473,14 @@ def main(argv=None):
     for name in ("check", "overdue", "pnl", "issues", "report"):
         sub.add_parser(name)
     sub.add_parser("week").add_argument("--start", help="first day of the 7-day window, default today")
+    sub.add_parser("documents", help="company document register with expiry status")
+    sub.add_parser("bids", help="bid list with document readiness")
+    sub.add_parser("workload").add_argument("--days", type=int, default=14, help="look-ahead window")
+    sub.add_parser("risks", help="early warnings for the next weeks").add_argument(
+        "--no-cash", action="store_true", help="skip the cash flow workbook")
+    h = sub.add_parser("huddle", help="agenda data for the daily or weekly operations huddle")
+    h.add_argument("--kind", choices=["daily", "weekly"], default="daily")
+    h.add_argument("--no-cash", action="store_true", help="skip the cash flow workbook")
     r = sub.add_parser("reminders")
     r.add_argument("--days", type=int, default=2, help="include tasks due within N days")
     r.add_argument("--resend-after", type=int, default=2, help="skip tasks reminded in the last N days")
@@ -452,7 +513,15 @@ def main(argv=None):
         print(json.dumps({"ok": not errors, "errors": errors, "rows": counts}, indent=2))
         return 1 if errors else 0
     cfg = config()
+    import risk  # late import: risk.py imports this module
+
+    cash, cash_note = (None, "skipped") if getattr(a, "no_cash", True) else risk.cash_summary()
     commands = {
+        "documents": lambda: risk.documents_view(data, today, cfg),
+        "bids": lambda: risk.bids_view(data, today),
+        "workload": lambda: risk.workload(data, today, a.days),
+        "risks": lambda: {**risk.risks(data, today, cfg, cash), "cash_note": cash_note},
+        "huddle": lambda: {**risk.huddle(data, today, cfg, a.kind, cash), "cash_note": cash_note},
         "overdue": lambda: overdue(data, today),
         "week": lambda: week(data, date.fromisoformat(a.start) if a.start else today),
         "pnl": lambda: pnl(data, today, cfg),

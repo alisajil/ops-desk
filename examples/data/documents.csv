@@ -1,0 +1,8 @@
+id,name,category,number,issued,expiry,location,owner
+D001,Company registration certificate,registration,REG-SAMPLE-1,2020-01-10,,Company Docs/registration.pdf,Meera
+D002,Tax registration certificate,tax,TAX-SAMPLE-1,2021-04-01,,Company Docs/tax.pdf,Meera
+D003,Quality management certificate,quality,QMS-SAMPLE-1,2024-11-20,2026-11-19,Company Docs/quality.pdf,Meera
+D004,Bank solvency letter,financial,BANK-SAMPLE-1,2026-01-15,2026-10-31,Company Docs/bank-letter.pdf,Meera
+D005,Past order completion certificate,experience,PO-SAMPLE-1,2025-06-01,,Company Docs/experience-1.pdf,Ravi
+D006,OEM authorisation letter,authorisation,OEM-SAMPLE-1,2025-12-01,2026-12-20,Company Docs/oem-letter.pdf,Ravi
+D007,Insurance policy,insurance,POL-SAMPLE-1,2025-10-01,2026-10-20,Company Docs/insurance.pdf,Meera
