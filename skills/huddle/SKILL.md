@@ -12,7 +12,7 @@ Data folder (`ops.py where` prints its path; `<data>` means that folder), script
 1. `ops.py huddle --kind daily` (15 minutes) or `--kind weekly` (45 minutes). Add `--no-cash` only if the workbook is not set up.
 2. Read the previous minutes in `<data>/huddles/`. List actions that were due and say which are done and which are not.
 3. Write the agenda, timeboxed, from the data:
-   - **Daily:** what is late, what is due today and in two days, what is blocked, the top risks, bids closing within 14 days, documents expiring within 30 days, clients who need contact.
+   - **Daily:** what is late, what is due today and in two days, what is blocked, the top risks, bids closing within 14 days, project submissions due or overdue, documents expiring within 30 days, clients who need contact.
    - **Weekly:** all of the above, plus profit and loss totals, the week ahead and clashes, each person's workload, cash position and decisions waiting.
    - Each item names an owner and the question to settle. Put the biggest risk first.
 4. Share the agenda as a draft to the attendees in `stakeholders.csv` (internal only).

@@ -31,9 +31,13 @@ SCHEMA = {
     "bids": ["id", "portal", "bid_no", "title", "buyer", "closing", "opening", "value_inr", "security_inr", "status", "owner", "notes"],
     "bid_documents": ["bid_id", "doc_name", "doc_id", "status", "owner", "due", "notes"],
     "client_log": ["date", "project_id", "kind", "note"],
+    "project_submissions": ["project_id", "doc_name", "doc_id", "status", "due", "submitted_on", "submitted_to", "location", "owner", "notes"],
 }
 # a new install has none of these yet
-OPTIONAL = {"zoho_lines", "issues", "reminder_log", "team", "leave", "documents", "bids", "bid_documents", "client_log"}
+OPTIONAL = {
+    "zoho_lines", "issues", "reminder_log", "team", "leave", "documents", "bids", "bid_documents", "client_log",
+    "project_submissions",
+}
 TASK_STATUS = {"todo", "doing", "blocked", "done"}
 PROJECT_STATUS = {"planned", "active", "on_hold", "done", "cancelled"}
 ISSUE_STATUS = {"open", "in_progress", "resolved"}
@@ -43,12 +47,13 @@ CLIENT_TYPES = {"private", "govt"}  # blank counts as private
 BID_STATUS = {"identified", "preparing", "submitted", "won", "lost", "no_bid"}
 BID_DOC_STATUS = {"needed", "ready", "missing", "na"}
 CLIENT_LOG_KINDS = {"update", "meeting", "complaint", "praise", "payment_followup"}
+SUBMISSION_STATUS = {"needed", "ready", "submitted", "accepted", "rejected", "na"}
 IGNORED_STATUS = {"void", "draft", "cancelled"}  # Zoho documents that do not count
 DATE_FIELDS = {
     "projects": ["start", "end"], "tasks": ["start", "due"], "reminder_log": ["date"],
     "zoho_lines": ["date", "due"], "issues": ["raised", "due"], "leave": ["from", "to"],
     "documents": ["issued", "expiry"], "bids": ["closing", "opening"], "bid_documents": ["due"],
-    "client_log": ["date"],
+    "client_log": ["date"], "project_submissions": ["due", "submitted_on"],
 }
 NUM_FIELDS = {
     "projects": ["budget_inr", "contract_value_inr"], "zoho_lines": ["amount_inr", "paid_inr"],
@@ -69,8 +74,18 @@ def settings():
         sys.exit(f"{path} is not valid JSON ({e}). Fix it or delete it and run the setup skill again.")
 
 
+def claude_folder():
+    """The OneDrive folder that holds data, company documents and project folders, or None if not set."""
+    chosen = os.environ.get("OPS_DESK_FOLDER") or settings().get("claude_folder")
+    return Path(chosen).expanduser() if chosen else None
+
+
 def data_dir():
-    chosen = os.environ.get("OPS_DESK_DATA") or settings().get("data_dir") or Path.home() / "ops-desk-data"
+    folder = claude_folder()
+    chosen = (
+        os.environ.get("OPS_DESK_DATA") or settings().get("data_dir")
+        or (folder / "data" if folder else None) or Path.home() / "ops-desk-data"
+    )
     return Path(chosen).expanduser()
 
 
@@ -201,6 +216,15 @@ def validate_planning(data, pids):
             errors.append(f"bid_documents.csv row {i}: status '{r['status']}' not in {sorted(BID_DOC_STATUS)}")
         if r["doc_id"] and r["doc_id"] not in doc_ids:
             errors.append(f"bid_documents.csv row {i}: doc_id '{r['doc_id']}' not in documents.csv")
+    for i, r in enumerate(data["project_submissions"], start=2):
+        if r["project_id"] not in pids:
+            errors.append(f"project_submissions.csv row {i}: unknown project code '{r['project_id']}'")
+        if r["status"] not in SUBMISSION_STATUS:
+            errors.append(f"project_submissions.csv row {i}: status '{r['status']}' not in {sorted(SUBMISSION_STATUS)}")
+        if r["doc_id"] and r["doc_id"] not in doc_ids:
+            errors.append(f"project_submissions.csv row {i}: doc_id '{r['doc_id']}' not in documents.csv")
+        if r["status"] in ("submitted", "accepted") and not r["submitted_on"]:
+            errors.append(f"project_submissions.csv row {i}: submitted_on is required once submitted")
     for i, r in enumerate(data["client_log"], start=2):
         if r["project_id"] not in pids:
             errors.append(f"client_log.csv row {i}: unknown project code '{r['project_id']}'")
@@ -437,13 +461,19 @@ EMPTY_CONFIG = {
 }
 
 
-def init(target, cashflow_file, with_examples):
-    """First-time setup: data folder with header-only CSVs (or the fictional examples) and ~/.ops-desk.json."""
+def init(target, cashflow_file, with_examples, claude=None):
+    """First-time setup: data folder with header-only CSVs (or the fictional examples), the Claude folder layout, ~/.ops-desk.json."""
     target = Path(target).expanduser().resolve()
     if cashflow_file and not Path(cashflow_file).expanduser().exists():
         return {"ok": False, "errors": [f"cashflow file not found: {cashflow_file}"]}
     target.mkdir(parents=True, exist_ok=True)
     created = []
+    root = None
+    if claude:
+        import vault  # late import: vault.py imports this module
+
+        root = Path(claude).expanduser().resolve()
+        created += [f"folder:{p}" for p in vault.ensure_structure(root)]
     examples = Path(__file__).resolve().parent.parent / "examples" / "data"
     if with_examples:
         for src in examples.iterdir():
@@ -460,6 +490,8 @@ def init(target, cashflow_file, with_examples):
             created.append("config.json")
     path = Path(os.environ.get("OPS_DESK_SETTINGS") or Path.home() / ".ops-desk.json")
     merged = {**settings(), "data_dir": str(target)}
+    if root:
+        merged["claude_folder"] = str(root)
     if cashflow_file:
         merged["cashflow_file"] = str(Path(cashflow_file).expanduser().resolve())
     path.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
@@ -474,6 +506,9 @@ def main(argv=None):
         sub.add_parser(name)
     sub.add_parser("week").add_argument("--start", help="first day of the 7-day window, default today")
     sub.add_parser("documents", help="company document register with expiry status")
+    sub.add_parser("submissions", help="per-project submissions with blockers")
+    sub.add_parser("folders", help="create project and bid folders in the Claude folder").add_argument(
+        "--check", dest="check_only", action="store_true", help="report only, create nothing")
     sub.add_parser("bids", help="bid list with document readiness")
     sub.add_parser("workload").add_argument("--days", type=int, default=14, help="look-ahead window")
     sub.add_parser("risks", help="early warnings for the next weeks").add_argument(
@@ -491,6 +526,7 @@ def main(argv=None):
     i = sub.add_parser("init", help="first-time setup of the data folder and ~/.ops-desk.json")
     i.add_argument("--data-dir", help="default: the current data dir (~/ops-desk-data)")
     i.add_argument("--cashflow-file", help="path to the synced cash flow workbook")
+    i.add_argument("--claude-folder", help="the OneDrive folder for data, company documents and project folders")
     i.add_argument("--with-examples", action="store_true", help="copy the fictional sample data instead of empty templates")
     a = ap.parse_args(argv)
 
@@ -500,11 +536,13 @@ def main(argv=None):
         print(json.dumps({
             "data_dir": str(data_dir()), "data_dir_exists": data_dir().exists(),
             "cashflow_file": os.environ.get("OPS_DESK_CASHFLOW_FILE") or settings().get("cashflow_file"),
+            "claude_folder": str(claude_folder()) if claude_folder() else None,
             "settings_file": str(settings_path), "settings_file_exists": settings_path.exists(),
         }, indent=2))
         return 0
     if a.cmd == "init":
-        out = init(a.data_dir or data_dir(), a.cashflow_file, a.with_examples)
+        target = a.data_dir or (Path(a.claude_folder).expanduser() / "data" if a.claude_folder else data_dir())
+        out = init(target, a.cashflow_file, a.with_examples, a.claude_folder)
         print(json.dumps(out, indent=2))
         return 0 if out["ok"] else 1
     data, errors = load_all()
@@ -513,11 +551,14 @@ def main(argv=None):
         print(json.dumps({"ok": not errors, "errors": errors, "rows": counts}, indent=2))
         return 1 if errors else 0
     cfg = config()
-    import risk  # late import: risk.py imports this module
+    import risk  # late imports: these modules import this one
+    import vault
 
     cash, cash_note = (None, "skipped") if getattr(a, "no_cash", True) else risk.cash_summary()
     commands = {
         "documents": lambda: risk.documents_view(data, today, cfg),
+        "submissions": lambda: risk.submissions_view(data, today, cfg),
+        "folders": lambda: vault.sync(data, a.check_only),
         "bids": lambda: risk.bids_view(data, today),
         "workload": lambda: risk.workload(data, today, a.days),
         "risks": lambda: {**risk.risks(data, today, cfg, cash), "cash_note": cash_note},

@@ -12,9 +12,10 @@ Script: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/ops.py"` (fallback: `find ~/.cla
 ## 1. Python and openpyxl
 Run `python3 -c "import openpyxl"`. If it fails, tell the user `pip install openpyxl` is needed and ask before running it.
 
-## 2. Data folder and settings
-Ask where to keep the data folder (default `~/ops-desk-data`). If the colleagues share one, it should be a synced OneDrive folder. Ask for the cash flow workbook path (the synced file) if it exists yet.
-Run `ops.py init --data-dir <folder> [--cashflow-file <file>]`. This creates empty templates, not sample data, and writes `~/.ops-desk.json` so no environment variables are needed. Run `ops.py where` and `ops.py check` and show the result.
+## 2. Claude folder and settings
+Ask for the Claude folder: a folder in OneDrive (for example `OneDrive/Claude`) that holds everything. If several colleagues use the plugin, it must be a synced shared folder. If it is a new folder, create it in OneDrive first. Ask for the cash flow workbook path if it exists yet (suggest keeping it in the folder's `Cash/` subfolder).
+Run `ops.py init --claude-folder <folder> [--cashflow-file <file>]`. It creates `data/` (empty templates, not sample data), `Company/` with a subfolder per document category, `Projects/`, `Bids/` and `Cash/`, and writes `~/.ops-desk.json` so no environment variables are needed. Run `ops.py where` and `ops.py check` and show the result.
+Explain: only one computer should run the scheduled jobs and write to `data/`. Others can read. Two computers writing at once makes OneDrive create conflict copies.
 
 ## 3. Who gets what (`config.json` in the data folder)
 Ask, then write:
@@ -45,6 +46,9 @@ List the remaining Zoho projects. Propose rows for `projects.csv`. Write them af
 
 ## 7a. Team, documents and bids
 Ask for the team (name, role, skills, weekly hours) and write `team.csv`. Ask for the company documents the user can list now (name, category, expiry, where the file is kept) and write `documents.csv` after each date is confirmed. Ask whether the company bids on government portals such as GeM. If yes, explain that `gem-bids` tracks bids and checklists but never logs in or submits. Set `client_type` to `govt` for government clients in `projects.csv`.
+
+## 7b. Company documents and project folders
+Ask the user to put the company's statutory and company documents into `Company/<category>/` in the Claude folder. Then run the `company-documents` skill to register each with its expiry date. For each project in `projects.csv`, run `ops.py folders` and then the `project-submissions` skill to build its submission checklist.
 
 ## 8. Mailbox test
 If the mail connector exists: ask the user to send a short test mail to ops@, then run the `ops-inbox` skill. Check that it is classified, nothing is sent, and a draft appears.

@@ -19,6 +19,7 @@ Same as `ops-inbox`: data folder (`ops.py where` prints its path; `<data>` means
 3. Show the proposed table (id, task, owner, start, due, depends_on) and wait for a yes before writing.
 4. On yes: add the project row (`status` planned or active), then the tasks. Task ids continue from the highest existing `T###`. Use `;` between ids in `depends_on`. Respect `work_week` in `config.json`.
 5. Run `ops.py check`, then `ops.py week` to look for clashes.
+6. Run `ops.py folders` to create the project's folder in the Claude folder, then offer the `project-submissions` skill to build its submission checklist.
 
 ## Delay or change
 1. Update the late task. Move dependent tasks by the same slip unless the user says otherwise.

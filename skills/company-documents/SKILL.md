@@ -9,13 +9,13 @@ description: Keep a register of company documents (registrations, tax, quality, 
 Data folder (`ops.py where` prints its path; `<data>` means that folder), script `ops.py` under `${CLAUDE_PLUGIN_ROOT}/scripts/` (fallback: `find ~/.claude/plugins -path '*ops-desk*/scripts/ops.py'`). Run `ops.py check` first and after edits. Drafts only. Log changes in `<data>/log.md`.
 
 ## The register (`documents.csv`)
-`id` (D001, continue from the highest), `name`, `category`, `number` (the certificate or registration number), `issued`, `expiry` (blank when the document does not expire), `location` (the folder path or link where the file lives), `owner` (who renews it).
+`id` (D001, continue from the highest), `name`, `category`, `number` (the certificate or registration number), `issued`, `expiry` (blank when the document does not expire), `location` (the path relative to the Claude folder, for example `Company/tax/tax-registration.pdf`), `owner` (who renews it).
 
 Suggested categories: registration, tax, quality, financial, experience, authorisation, insurance, bank, technical, policy, people.
 
 ## Add a document
 1. The user gives a file or its path. Read it. Extract the name, number, issue date and expiry date. Show what you found and where you found it. Write the row only after the user confirms. If a date is unclear, ask. Never guess an expiry.
-2. Set `location` to where the file lives. Do not move, rename or delete the user's files.
+2. Set `location` to where the file lives, relative to the Claude folder. Files belong in `Company/<category>/`. If the file is elsewhere, tell the user and suggest moving it. Do not move, rename or delete files yourself. `ops.py folders --check` and `ops.py documents` report files that are not where the register says.
 3. `ops.py check`.
 
 ## Watch expiry
@@ -28,7 +28,7 @@ Suggested categories: registration, tax, quality, financial, experience, authori
 For a bid, client audit or tender:
 1. List what is asked. Take it from the bid document or the client's request, not from memory.
 2. Match each item to a register row. Report: found and valid, found but expiring or expired, not in the register.
-3. Give the user a list of file locations to attach. You do not attach or upload.
+3. Give the user a list of file locations to attach. You do not attach or upload. For a project's documents use `project-submissions`.
 4. For documents not in the register, ask who holds them and by when.
 
 ## Care with sensitive data

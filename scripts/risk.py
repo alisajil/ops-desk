@@ -8,12 +8,14 @@ from datetime import timedelta
 from pathlib import Path
 
 import ops
+import vault
 from ops import num, to_date
 
 DEFAULTS = {
     "horizon_days": 30,               # show non-high warnings that land within this many days
     "document_warning_days": [60, 30, 7],  # low / medium / high when a document expires within these days
     "bid_warning_days": [30, 14, 7],  # low / medium / high when a bid with blockers closes within these days
+    "submission_warning_days": [3, 7, 14],  # high / medium / low when a project submission is still needed within these days
     "client_update_days": 7,          # warn when an active project has had no client contact for this long
     "max_concurrent_tasks": 4,        # warn when one person has more open tasks than this on the same day
     "progress_gap_pct": [15, 30],     # medium / high when cost % of budget runs this far ahead of tasks done %
@@ -221,6 +223,7 @@ def documents_view(data, today, cfg):
         rows.append({
             "id": d["id"], "name": d["name"], "category": d["category"], "expiry": d["expiry"] or None,
             "days_left": left, "status": _doc_status(left, warn), "owner": d["owner"], "location": d["location"],
+            "file_found": vault.file_found(d["location"]),
         })
     rows.sort(key=lambda r: (r["days_left"] is None, r["days_left"] if r["days_left"] is not None else 0))
     counts = {}
@@ -233,6 +236,9 @@ def document_risks(data, today, cfg):
     warn = setting(cfg, "document_warning_days")
     out = []
     for d in data["documents"]:
+        if vault.file_found(d["location"]) is False:
+            out.append(_item("document-file", d["id"], "medium", f"{d['name']}: file not found",
+                             f"Expected at {d['location']} in the Claude folder. Is it saved, and is OneDrive synced?", "", None))
         if not d["expiry"]:
             continue
         left = (to_date(d["expiry"]) - today).days
@@ -297,6 +303,75 @@ def bid_risks(data, today, cfg):
             out.append(_item("bid", b["id"], severity,
                              f"Bid {b['bid_no'] or b['id']} closes in {days} days with {len(b['blockers'])} blocker(s)",
                              f"{b['title']} ({b['buyer']}). {shown}.", "", days))
+    return out
+
+
+# ---------- project submissions ----------
+
+def _submission_blockers(row, docs_by_id):
+    doc = docs_by_id.get(row["doc_id"])
+    if not doc:
+        return []
+    out = []
+    if doc["expiry"] and row["due"] and to_date(doc["expiry"]) < to_date(row["due"]):
+        out.append(f"linked document expires {doc['expiry']}, before the due date")
+    if vault.file_found(doc["location"]) is False:
+        out.append(f"file not found at {doc['location']}")
+    return out
+
+
+def submissions_view(data, today, cfg):
+    docs = {d["id"]: d for d in data["documents"]}
+    live = {p["id"] for p in data["projects"] if p["status"] not in ("done", "cancelled")}
+    rows, per_project = [], {}
+    for r in data["project_submissions"]:
+        pending = r["status"] in ("needed", "ready")
+        left = (to_date(r["due"]) - today).days if r["due"] else None
+        rows.append({
+            "project_id": r["project_id"], "doc_name": r["doc_name"], "doc_id": r["doc_id"], "status": r["status"],
+            "due": r["due"] or None, "days_left": left, "submitted_on": r["submitted_on"] or None,
+            "submitted_to": r["submitted_to"], "owner": r["owner"], "location": r["location"],
+            "file_found": vault.file_found(r["location"]),
+            "overdue": pending and left is not None and left < 0,
+            "blockers": _submission_blockers(r, docs) if pending else [],
+        })
+        if r["project_id"] in live:
+            entry = per_project.setdefault(r["project_id"], {"needed": 0, "ready": 0, "submitted": 0, "accepted": 0, "rejected": 0, "na": 0, "overdue": 0})
+            entry[r["status"]] += 1
+            entry["overdue"] += rows[-1]["overdue"]
+    rows.sort(key=lambda x: (x["status"] not in ("needed", "ready", "rejected"), x["days_left"] if x["days_left"] is not None else 10**6))
+    return {"as_of": today.isoformat(), "by_project": per_project, "submissions": rows}
+
+
+def submission_risks(data, today, cfg):
+    limits = setting(cfg, "submission_warning_days")
+    out = []
+    for r in submissions_view(data, today, cfg)["submissions"]:
+        project = next((p for p in data["projects"] if p["id"] == r["project_id"]), None)
+        if project is None or project["status"] in ("done", "cancelled"):
+            continue
+        key = f"{r['project_id']}:{r['doc_name']}"
+        if r["status"] == "rejected":
+            out.append(_item("submission", key, "high", f"{r['project_id']}: '{r['doc_name']}' was rejected",
+                             f"Submitted to {r['submitted_to'] or 'the client'}. Find out why and resubmit.", r["project_id"], 0))
+            continue
+        if r["status"] not in ("needed", "ready") or r["days_left"] is None:
+            continue
+        days = r["days_left"]
+        blockers = r["blockers"]
+        detail = f"Due {r['due']}, status {r['status']}, to {r['submitted_to'] or 'the client'}, owner {r['owner'] or 'not set'}."
+        if blockers:
+            detail += " Blockers: " + "; ".join(blockers) + "."
+        if days < 0:
+            out.append(_item("submission", key, "high", f"{r['project_id']}: submission '{r['doc_name']}' is {-days} days overdue",
+                             detail, r["project_id"], days))
+            continue
+        by_status = _bucket(days, limits) if r["status"] == "needed" else ("low" if days <= min(limits) else None)
+        by_blocker = _bucket(days, limits) if blockers else None
+        severity = min((s for s in (by_status, by_blocker) if s), key=lambda s: SEVERITY_ORDER[s], default=None)
+        if severity:
+            out.append(_item("submission", key, severity,
+                             f"{r['project_id']}: '{r['doc_name']}' due in {days} days ({r['status']})", detail, r["project_id"], days))
     return out
 
 
@@ -384,6 +459,7 @@ def risks(data, today, cfg, cash=None):
     items = (
         schedule_risks(data, today) + cost_risks(data, today, cfg, money) + money_risks(data, today, money)
         + client_risks(data, today, cfg) + document_risks(data, today, cfg) + bid_risks(data, today, cfg)
+        + submission_risks(data, today, cfg)
         + team_risks(data, today, cfg) + cash_risks(cash, today)
     )
     horizon = setting(cfg, "horizon_days")
@@ -415,6 +491,10 @@ def huddle(data, today, cfg, kind="daily", cash=None):
         "blocked": [_task_view(t, today) for t in tasks if t["status"] == "blocked"],
         "issues_overdue": [i for i in ops.issues(data, today)["open"] if i["days_overdue"] > 0],
         "bids_closing_14_days": bids,
+        "submissions_due_14_days": [
+            s for s in submissions_view(data, today, cfg)["submissions"]
+            if s["status"] in ("needed", "ready") and s["days_left"] is not None and s["days_left"] <= 14
+        ],
         "documents_expiring_30_days": docs,
         "clients_needing_contact": [i["project_id"] for i in found["items"] if i["id"].startswith("client:contact:")],
         "cash": cash,

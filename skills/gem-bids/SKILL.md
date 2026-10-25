@@ -19,6 +19,7 @@ Data folder (`ops.py where` prints its path; `<data>` means that folder), script
 - `bids.csv`: one row per bid (`portal` GeM, `bid_no`, `title`, `buyer`, `closing`, `opening`, `value_inr`, `security_inr` for any bid security the document asks for, `status`, `owner`).
 - `bid_documents.csv`: the checklist for each bid. `doc_id` links a line to `documents.csv`, so expiry is checked against the closing date.
 - Statuses: identified, preparing, submitted, won, lost, no_bid.
+- Files: `Bids/<id>-<bid no>/Bid-document/` for the tender document and `Prepared-pack/` for what is ready to submit. `ops.py folders` creates them.
 
 ## Steps
 1. **Identify.** The user gives you the bid document (PDF) or its details. Read it. Extract only what it states: bid number, closing and opening dates, bid security amount, the documents it asks for, eligibility conditions, delivery period, payment terms, performance security, penalties, clarification dates. Show the extraction and the page of each item. Write `bids.csv` after the user confirms.
@@ -26,7 +27,7 @@ Data folder (`ops.py where` prints its path; `<data>` means that folder), script
 3. **Checklist.** For every document the bid asks for, add a `bid_documents.csv` row. Link `doc_id` where `documents.csv` has it. Mark status ready, needed, missing or na. Put an internal due date at least 3 working days before closing.
 4. **Track.** `ops.py bids` shows blockers: missing documents, and documents that expire before the bid closes. Send reminders at 14, 7, 3 and 1 days. A blocker inside 7 days is a high warning in `early-warning`.
 5. **Submit.** The user submits on the portal. Ask them to confirm the submission and then set the status to submitted. Note the opening date for follow-up.
-6. **Result.** Won: set up the project with the `project-schedule` skill (project code, tasks from the bid's delivery terms, contract value, cash flow head), plan invoices and any performance security in `cashflow-update`, and add `client_type` govt. Lost: record why in `notes` for the next bid.
+6. **Result.** Won: set up the project with the `project-schedule` skill (project code, tasks from the bid's delivery terms, contract value, cash flow head, `client_type` govt). Then run `ops.py folders` and build the project's submission checklist with `project-submissions`. Plan invoices and any performance security in `cashflow-update`. Lost: record why in `notes` for the next bid.
 
 ## After the win
 Watch the delivery date and payment terms stated in the order. Chase payment early and politely through `project-pnl` and `client-care`. Government payment timing is a cash risk: keep the cash flow workbook current.

@@ -48,7 +48,7 @@ def ids(items):
 
 def test_risks_report_the_expected_warnings_with_severity(data, capsys):
     code, out = run(capsys, "risks", "--no-cash")
-    assert code == 0 and out["summary"] == {"high": 7, "medium": 7, "low": 1}
+    assert code == 0 and out["summary"] == {"high": 9, "medium": 7, "low": 2}
     found = ids(out["items"])
     assert found["cost:PRJ-001"] == "high" and found["cost:PRJ-002"] == "high"
     assert found["client:complaint:PRJ-002"] == "high" and found["client:contact:PRJ-002"] == "medium"
@@ -179,7 +179,7 @@ def test_new_files_are_validated(data, capsys):
 
 
 def test_a_new_install_has_none_of_the_new_files(data, capsys):
-    for name in ("team", "leave", "documents", "bids", "bid_documents", "client_log"):
+    for name in ("team", "leave", "documents", "bids", "bid_documents", "client_log", "project_submissions"):
         (data / f"{name}.csv").unlink()
     code, out = run(capsys, "risks", "--no-cash")
     assert code == 0 and all(i["area"] not in ("document", "bid", "team") for i in out["items"])

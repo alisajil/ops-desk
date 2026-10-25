@@ -2,7 +2,7 @@
 
 An operations manager assistant for a small engineering and systems-integration company. People email `ops@your-company.com`. Claude acts as the operations manager: it runs the daily and weekly huddles, keeps the team organised, tracks projects, money and cash, watches profit and client happiness, warns management early about problems that are coming, and keeps company documents and government bids (GeM) ready.
 
-Version 0.3.0. Three places hold data, each with one job:
+Version 0.4.0. Three places hold data, each with one job:
 
 | Where | Holds | Written by |
 |---|---|---|
@@ -22,6 +22,7 @@ The project code is the key everywhere: `projects.csv` `id` is the same code use
 | `early-warning` | Scan for problems coming in the next weeks and warn management with a recommendation. |
 | `gem-bids` | Government tenders on GeM: go or no-go, checklist from the bid document, readiness, after the win. |
 | `company-documents` | Register of company documents with expiry warnings and document packs for bids. |
+| `project-submissions` | What each project must submit (statutory and project-specific), files kept in the project folder, warnings before it is due. |
 | `team-planner` | Roles, skills, workload, leave, fair assignment of new work. |
 | `client-care` | Contact log, status updates, complaints, payment follow-ups, unhappy-client signals. |
 | `ops-inbox` | Turn new mail into task and issue updates. Draft entries for the accountant. Draft replies. |
@@ -36,7 +37,8 @@ The project code is the key everywhere: `projects.csv` `id` is the same code use
 
 Two scripts do all date and money maths and validate the data, so Claude never calculates these itself:
 - `scripts/ops.py`: schedule, issues, P&L from the Zoho lines, reminders, RAG, and the commands `risks`, `workload`, `documents`, `bids`, `huddle`.
-- `scripts/risk.py`: the early-warning rules, workload, document expiry, bid readiness and huddle data behind those commands.
+- `scripts/risk.py`: the early-warning rules, workload, document expiry, bid readiness, submissions and huddle data behind those commands.
+- `scripts/vault.py`: the Claude folder layout, project and bid folders, and file lookups (`ops.py folders`).
 - `scripts/cashflow.py`: the Excel workbook. It inserts and removes rows the way Excel does (re-chains the balance formulas, shifts recurring links, summary ranges, highlights and print area), checks the result, backs up the old file, then replaces it. It refuses to write if the file is open in Excel.
 
 ## How it runs the company
@@ -48,7 +50,7 @@ Two scripts do all date and money maths and validate the data, so Claude never c
 | Friday | Management report, a status update to every active client |
 | Monthly | Review documents, bids pipeline, team workload, project P&L |
 
-**What it warns about, ahead of time** (`ops.py risks`): schedule slips and blocked work, cost running ahead of progress, late client payments, clients with no contact or an unanswered complaint, documents about to expire, bids closing with missing documents, people overloaded or on leave when work is due, and cash going negative. Each warning has a severity, the number of days until it bites, and a recommendation. High items go to management the same day. Thresholds are in `config.json`.
+**What it warns about, ahead of time** (`ops.py risks`): schedule slips and blocked work, cost running ahead of progress, late client payments, clients with no contact or an unanswered complaint, documents about to expire or missing from the folder, project submissions that are due, overdue, blocked or rejected, bids closing with missing documents, people overloaded or on leave when work is due, and cash going negative. Each warning has a severity, the number of days until it bites, and a recommendation. High items go to management the same day. Thresholds are in `config.json`.
 
 **Government work.** `gem-bids` tracks each bid, builds its checklist from the bid's own document, and checks every linked company document against the closing date. It never assumes a requirement, never logs in to the portal and never submits. A person submits.
 
@@ -77,7 +79,7 @@ After installing, open Claude on the computer and run the setup skill:
 
 It walks through, one step at a time:
 1. Python and `openpyxl` check.
-2. Data folder and cash flow workbook path. It creates empty templates (not sample data) and saves the paths in `~/.ops-desk.json`, so no environment variables are needed.
+2. The Claude folder in OneDrive and the cash flow workbook path. It creates the folder layout and empty templates (not sample data) and saves the paths in `~/.ops-desk.json`, so no environment variables are needed.
 3. Who gets the weekly plan and report (`management_recipients`), and which addresses may change the cash flow (`cashflow_editors`).
 4. Cash flow workbook check.
 5. Connectors: Microsoft 365 for the ops@ mailbox, Zoho Books. Connect them in Claude's connector settings, then restart the session.
@@ -92,6 +94,32 @@ OPS_DESK_DATA=examples/data python3 scripts/ops.py pnl
 python3 scripts/cashflow.py --file examples/cashflow-example.xlsx summary
 ```
 `python3 scripts/ops.py where` shows which folder and workbook are in use.
+
+## The Claude folder (OneDrive)
+
+One OneDrive folder, called `Claude` for example, holds everything. Set it up once with `/ops-desk:setup`, or `python3 scripts/ops.py init --claude-folder <path>`.
+
+```
+Claude/
+  data/                      the plugin's records: CSV files, config, log, huddle minutes, drafts, reports
+  Company/                   statutory and company documents, one subfolder per category
+    registration/ tax/ quality/ financial/ experience/ authorisation/ insurance/ bank/ technical/ policy/ people/
+  Projects/
+    PRJ-001-project-name/    one folder per project code
+      Submissions/           what we send or have sent to the client or an authority
+      Documents/             orders, contracts, approvals, drawings received
+      Site/                  site reports and photos
+      Commercial/            quotes and invoice copies
+  Bids/
+    B001-bid-number/         Bid-document/ and Prepared-pack/
+  Cash/                      the cash flow workbook
+```
+
+- `ops.py folders` creates any missing project and bid folders. `ops.py folders --check` only reports, and lists missing files and folders that match no project.
+- File locations in `documents.csv` and `project_submissions.csv` are paths relative to this folder, for example `Company/tax/tax-registration.pdf`. A file that is not where the record says is a warning. A location can never point outside the folder.
+- Company documents are kept once, in `Company/`. Projects link to them. Project folders hold only that project's own files.
+- Share the folder with each colleague and let OneDrive sync it to their computer. **Only one computer should run the scheduled jobs and write to `data/`.** Two computers writing at once makes OneDrive create conflict copies.
+- Never put this folder or the repo's `examples/` data in a public place. The folder holds company records.
 
 ## Zoho Books
 
@@ -158,7 +186,8 @@ Headers must not change. Dates `YYYY-MM-DD`. Money in rupees, digits only, exclu
 - `issues.csv`: types delay, quality, safety, material, payment, client, other. Status open, in_progress, resolved.
 - `projects.csv` also has `client_type` (`govt` or `private`, blank means private).
 - `team.csv` (name, role, skills, weekly hours) and `leave.csv` (name, from, to, reason).
-- `documents.csv`: company documents with number, issue and expiry dates, file location and owner. Blank expiry means it does not expire.
+- `project_submissions.csv`: the documents each project must submit. `doc_id` links a company document; status needed, ready, submitted, accepted, rejected, na.
+- `documents.csv`: company documents with number, issue and expiry dates, file location (relative to the Claude folder) and owner. Blank expiry means it does not expire.
 - `bids.csv` and `bid_documents.csv`: one row per bid, and its document checklist (`doc_id` links a line to `documents.csv`). Status identified, preparing, submitted, won, lost, no_bid.
 - `client_log.csv`: dated client contacts. Kinds update, meeting, complaint, praise, payment_followup.
 

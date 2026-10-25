@@ -1,0 +1,7 @@
+project_id,doc_name,doc_id,status,due,submitted_on,submitted_to,location,owner,notes
+PRJ-001,Tax registration certificate,D002,ready,2026-10-29,,Sample Client A,Company/tax/tax-registration.pdf,Meera,
+PRJ-001,Insurance policy,D007,needed,2026-10-28,,Sample Client A,,Meera,Renewed policy required
+PRJ-001,Site safety plan,,needed,2026-11-10,,Sample Client A,,Ravi,
+PRJ-002,Quality certificate,D003,needed,2026-11-25,,Sample Client B,,Meera,
+PRJ-002,Type test report,,submitted,2026-10-20,2026-10-19,Sample Client B,Projects/PRJ-002-pump-skid-fabrication/Submissions/type-test-report.pdf,Anil,
+PRJ-003,Work order acknowledgement,,needed,2026-10-24,,Sample Client C,,Anil,
